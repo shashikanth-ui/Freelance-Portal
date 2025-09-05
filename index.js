@@ -1,23 +1,374 @@
 import express from "express";
+import session from "express-session";
+import pg from "pg";
 import env from "dotenv";
+import passport from "passport";
+import bcrypt from "bcrypt";
+import { Strategy } from "passport-local";
+import GoogleStrategy from "passport-google-oauth2";
+import multer from "multer";
+
 const app = express();
+const saltRounds = process.env.SALT_ROUNDS;
+env.config();
 app.use(express.urlencoded({extended:true}));
 app.use(express.static("public"));
+app.use(session({
+    secret: process.env.EXPRESS_SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+const db = new pg.Client({
+    user: process.env.PG_USER,
+    host: process.env.PG_HOST,
+    database: process.env.PG_DATABASE,
+    password: process.env.PG_PASSWORD,
+    port: process.env.PG_PORT,
+});
+db.connect();
 
 app.get("/",(req,res)=>{
     res.render("index.ejs");
-})
+});
+
+
+// ----------- MULTER CONFIG -----------
+
+// Storage for freelancer photos
+const freelancerStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "public/images/freelancer_images/");
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = file.originalname.split(".").pop();
+    cb(null, `${uniqueName}.${ext}`);
+  },
+});
+
+// Storage for client photos
+const clientStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "public/images/client_images/");
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = file.originalname.split(".").pop();
+    cb(null, `${uniqueName}.${ext}`);
+  },
+});
+
+// Multer uploaders
+const uploadFreelancer = multer({ storage: freelancerStorage });
+const uploadClient = multer({ storage: clientStorage });
+
+
+
 
 // ------------ auth routes ---------------
 
 app.get("/client_auth",(req,res)=>{
     res.render("project_clients/client_index.ejs");
-})
+});
 
 app.get("/freelancer_auth",(req,res)=>{
     res.render("freelancer/freelancer_index.ejs")
-})
+});
+
+app.get("/client_signup",(req,res)=>{
+    res.render("project_clients/client_signup.ejs");
+});
+
+app.get("/client_login",(req,res)=>{
+    res.render("project_clients/client_login.ejs");
+});
+
+app.get("/freelancer_signup",(req,res)=>{
+    res.render("freelancer/freelancer_signup.ejs");
+});
+
+app.get("/freelancer_login",(req,res)=>{
+    res.render("freelancer/freelancer_login.ejs");
+});
+
+app.get("/freelancer_home",(req,res)=>{
+        if(req.isAuthenticated()){
+            res.render("freelancer/freelancer_home.ejs");
+    }else{
+        res.redirect("/freelancer_login");
+    }
+});
+
+app.get("/client_home",(req,res)=>{
+    if(req.isAuthenticated()){
+        res.render("project_clients/client_home.ejs");
+    }else{
+        res.redirect("/client_login");
+    }
+});
+
+app.get("/auth/google/client", passport.authenticate("google", { scope: ["profile","email"], state: "client" }));
+app.get("/auth/google/freelancer", passport.authenticate("google", { scope: ["profile","email"], state: "freelancer" }));
+
+app.get("/auth/google/callback", 
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  (req, res) => {
+    if (req.user.role === "client") {
+      if (req.user.isNew) {
+        return res.redirect("/client_newSignupForm");
+      }
+      return res.redirect("/client_home");
+    } else if (req.user.role === "freelancer") {
+      if (req.user.isNew) {
+        return res.redirect("/freelancer_newSignupForm");
+      }
+      return res.redirect("/freelancer_home");
+    } else {
+      res.redirect("/");
+    }
+  }
+);
+
+
+
+app.get("/freelancer_newSignupForm",(req,res)=>{
+    if(req.isAuthenticated()){
+        res.render("freelancer/freelancer_newSignupForm.ejs");
+    }else{
+        res.redirect("/freelancer_login");
+    }
+
+    
+});
+
+app.get("/client_newSignupForm",(req,res)=>{
+    if(req.isAuthenticated()){
+        res.render("project_clients/client_newSignupForm.ejs");
+    }else{
+        res.redirect("/client_login");
+    }
+});
+
+
+// -------------------- CLIENT SIGNUP --------------------
+app.post("/client_signup", async (req,res)=>{
+  const email = req.body.email;
+  const password = req.body.password;
+
+  try {
+    const result = await db.query("SELECT * FROM client WHERE client_email = $1", [email]);
+    if (result.rows.length > 0) {
+      return res.redirect("/client_login");
+    }
+
+    const hashedPassword = await bcrypt.hash(password, parseInt(saltRounds));
+    const clientDetails = await db.query(
+      "INSERT INTO client (client_email, client_password, role) VALUES ($1, $2, $3) RETURNING *",
+      [email, hashedPassword, "client"]
+    );
+
+    req.login(clientDetails.rows[0], (err) => {
+      if (err) return console.log(err);
+      res.redirect("/client_newSignupForm");
+    });
+
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+// -------------------- CLIENT LOGIN --------------------
+app.post("/client_login", passport.authenticate("local", {
+  successRedirect: "/client_home",
+  failureRedirect: "/client_login",
+}));
+
+
+// -------------------- FREELANCER SIGNUP --------------------
+app.post("/freelancer_signup", async (req,res)=>{
+  const email = req.body.email;
+  const password = req.body.password;
+
+  try {
+    const result = await db.query("SELECT * FROM freelancer WHERE freelancer_email = $1", [email]);
+    if (result.rows.length > 0) {
+      return res.redirect("/freelancer_login");
+    }
+
+    const hashedPassword = await bcrypt.hash(password, parseInt(saltRounds));
+    const freelancerDetails = await db.query(
+      "INSERT INTO freelancer (freelancer_email, freelancer_password, role) VALUES ($1, $2, $3) RETURNING *",
+      [email, hashedPassword, "freelancer"]
+    );
+
+    req.login(freelancerDetails.rows[0], (err) => {
+      if (err) return console.log(err);
+      res.redirect("/freelancer_newSignupForm");
+    });
+
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+// -------------------- FREELANCER LOGIN --------------------
+app.post("/freelancer_login", passport.authenticate("local", {
+  successRedirect: "/freelancer_home",
+  failureRedirect: "/freelancer_login",
+}));
+
+app.get("/logout",(req,res)=>{
+    req.logout(function (err){
+        if(err){
+            return console.log(err);
+        }else{
+            res.redirect("/");
+        }
+    });
+});
+
+
+app.post("/freelancer_newSignupForm", uploadFreelancer.single("photo"), async (req, res) => {
+  if (!req.isAuthenticated()) return res.redirect("/freelancer_login");
+
+  try {
+    const freelancerId = req.user.freelancer_id; // comes from session
+    const { name, age, gender, expertise_level, skills, hourly_charge, bio } = req.body;
+
+    // build photo path
+    const photoPath = req.file ? `/images/freelancer_images/${req.file.filename}` : null;
+
+    await db.query(
+      `INSERT INTO freelancer_info 
+      (freelancer_id, profile_photo, name, age, gender, expertise_level, skills, hourly_charge, bio) 
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [freelancerId, photoPath, name, age, gender, expertise_level, skills, hourly_charge, bio]
+    );
+
+    res.redirect("/freelancer_home");
+  } catch (err) {
+    console.error(err);
+    res.redirect("/freelancer_newSignupForm");
+  }
+});
+
+
+app.post("/client_newSignupForm", uploadClient.single("photo"), async (req, res) => {
+  if (!req.isAuthenticated()) return res.redirect("/client_login");
+
+  try {
+    const clientId = req.user.client_id;
+    const { name, age, gender, organization, contact } = req.body;
+
+    const photoPath = req.file ? `/images/client_images/${req.file.filename}` : null;
+
+    await db.query(
+      `INSERT INTO client_info 
+      (client_id, profile_photo, name, age, gender, organization, contact_info) 
+      VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [clientId, photoPath, name, age, gender, organization, contact]
+    );
+
+    res.redirect("/client_home");
+  } catch (err) {
+    console.error(err);
+    res.redirect("/client_newSignupForm");
+  }
+});
+
+
+
+passport.use(
+  "local",
+  new Strategy(
+    {
+      usernameField: "email",
+      passwordField: "password",
+      passReqToCallback: true,   // 👈 this lets us access req
+    },
+    async function verify(req, email, password, cb) {
+      const role = req.body.role; // ✅ now you can safely use req
+      try {
+        const result = await db.query(
+          `SELECT * FROM ${role} WHERE ${role}_email = $1`,
+          [email]
+        );
+
+        if (result.rows.length === 0) {
+          return cb(null, false, { message: "User not found" });
+        }
+
+        const passwordColumn = `${role}_password`;
+        const userPassword = result.rows[0][passwordColumn];
+
+        bcrypt.compare(password, userPassword, (err, valid) => {
+          if (err) return cb(err);
+          if (valid) return cb(null, result.rows[0]);
+          return cb(null, false, { message: "Invalid password" });
+        });
+      } catch (err) {
+        return cb(err);
+      }
+    }
+  )
+);
+
+
+passport.use("google", new GoogleStrategy(
+  {
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL,
+    passReqToCallback: true,
+  },
+  async (req, accessToken, refreshToken, profile, cb) => {
+    try {
+      const role = req.query.state; // "client" or "freelancer"
+      const email = profile.emails[0].value;
+
+      if (!["client", "freelancer"].includes(role)) {
+        return cb(new Error("Invalid role"));
+      }
+
+      const table = role;
+      const column = `${role}_email`;
+
+      const existingUser = await db.query(
+        `SELECT * FROM ${table} WHERE ${column} = $1`,
+        [email]
+      );
+
+      if (existingUser.rows.length > 0) {
+        // Existing user
+        return cb(null, existingUser.rows[0]);
+      }
+
+      // New user
+      const newUser = await db.query(
+        `INSERT INTO ${table} (${column}, ${role}_password, role) 
+         VALUES ($1, $2, $3) RETURNING *`,
+        [email, profile.id, role]
+      );
+
+      // Mark user as new
+      const user = newUser.rows[0];
+      user.isNew = true;
+      return cb(null, user);
+
+    } catch (err) {
+      return cb(err);
+    }
+  }
+));
+
+
+
+passport.serializeUser((user,cb)=>{cb(null,user);});
+passport.deserializeUser((user,cb)=>{cb(null,user);});
 
 app.listen(3000,()=>{
     console.log("http://localhost:3000");
-})
+});

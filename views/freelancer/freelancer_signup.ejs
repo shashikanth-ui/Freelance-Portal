@@ -1,0 +1,29 @@
+<%- include("../partials/header.ejs")  %>
+
+
+<div class="user-form-details">
+    <div class="user-form-title">
+        <h1>freelancer signup</h1>
+    </div>
+    <div class="user-form-info">
+        <form action="/freelancer_signup" method="post">
+        <input type="hidden" name="role" value="freelancer">
+        <div class="user-form-emailpass">
+        <label for="email">email</label>
+        <input type="email" name="email" id="" placeholder="enter your email" required>
+        <label for="password">password</label>
+        <input type="password" name="password" id="" placeholder="enter your password" required>
+        <button type="submit">signup</button>
+        </form>
+        </div>
+    </div>
+    <div class="user-form-redirect">
+        <a href="" target="/auth/google/freelancer">google</a>
+        <p> already have account ? <a href="/freelancer_login" target="">login</a></p>
+    </div>
+</div>
+    
+
+
+
+<%- include("../partials/footer.ejs")  %>
