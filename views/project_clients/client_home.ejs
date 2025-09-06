@@ -1,4 +1,29 @@
 <%- include("../partials/home_header.ejs")  %>
 
+<div class="all-freelancers-profiles">
+  <% allFreelancers.forEach(f => { %>
+    <div class="freelancer-card">
+      <% if (f.profile_photo) { %>
+        <img src="<%= f.profile_photo %>" class="freelancer-photo" alt="Profile Photo">
+      <% } else { %>
+        <div class="freelancer-photo placeholder">
+          No Photo
+        </div>
+      <% } %>
+
+      <div class="freelancer-info">
+        <h5 class="freelancer-name"><%= f.name %></h5>
+        <p><strong>Skills:</strong> <%= f.skills %></p>
+        <p><strong>Expertise:</strong> <%= f.expertise_level %></p>
+        <p><strong>Hourly:</strong> ₹<%= f.hourly_charge %> / hr</p>
+      </div>
+
+      <div class="freelancer-actions">
+        <a href="/chat/<%= f.id %>" class="btn btn-primary">Chat</a>
+        <a href="/freelancer/<%= f.id %>" class="btn btn-secondary">View</a>
+      </div>
+    </div>
+  <% }) %>
+</div>
 
 <%- include("../partials/home_footer.ejs")  %>

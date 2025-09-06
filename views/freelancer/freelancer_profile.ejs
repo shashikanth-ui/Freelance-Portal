@@ -28,11 +28,11 @@
 
       <!-- Expertise -->
       <label for="expertise">Expertise Level</label>
-      <select name="expertise" id="expertise" value="<%= user.expertise_level %>" required>
+      <select name="expertise_level" id="expertise_level" required>
         <option value="">Select</option>
-        <option value="beginner">Beginner</option>
-        <option value="intermediate">Intermediate</option>
-        <option value="expert">Expert</option>
+        <option value="beginner" <%= user.expertise_level === "beginner" ? "selected" : "" %>>Beginner</option>
+        <option value="intermediate" <%= user.expertise_level === "intermediate" ? "selected" : "" %>>Intermediate</option>
+        <option value="expert" <%= user.expertise_level === "expert" ? "selected" : "" %>>Expert</option>
       </select>
 
       <!-- Skills -->
@@ -41,7 +41,7 @@
 
       <!-- Hourly Charge -->
       <label for="hourlyCharge">Hourly Charge ($)</label>
-      <input type="number" name="hourlyCharge" id="hourlyCharge" placeholder="Select expertise first" value="<%= user.hourly_charge %>" required>
+      <input type="number" name="hourly_charge" id="hourly_charge" value="<%= user.hourly_charge %>" required>
 
       <!-- Bio -->
       <label for="bio">Bio</label>

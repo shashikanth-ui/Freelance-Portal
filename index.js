@@ -129,39 +129,82 @@ app.get("/freelancer_home", async (req, res) => {
   }
 });
 
-
 app.get("/client_home", async (req, res) => {
-  if (req.isAuthenticated()) {
-    try {
-      const details = await db.query(`
-        SELECT 
-          c.client_id AS id,
-          c.client_email AS email,
-          c.role,
-          ci.name,
-          ci.age,
-          ci.gender,
-          ci.organization,
-          ci.contact_info,
-          ci.profile_photo,
-          ci.created_at,
-          ci.updated_at
-        FROM client c
-        LEFT JOIN client_info ci
-          ON c.client_id = ci.client_id
-        WHERE c.client_id = $1
-      `, [req.user.client_id]);
+  if (!req.isAuthenticated()) return res.redirect("/client_login");
 
-      res.render("project_clients/client_home.ejs", { user: details.rows[0] });
-      console.log(req.user);
-    } catch (err) {
-      console.error(err);
-      res.send("Error fetching client details");
+  try {
+    // Fetch client details
+    const clientResult = await db.query(`
+      SELECT 
+        c.client_id AS id,
+        c.client_email AS email,
+        c.role,
+        ci.name,
+        ci.age,
+        ci.gender,
+        ci.organization,
+        ci.contact_info,
+        ci.profile_photo
+      FROM client c
+      LEFT JOIN client_info ci
+        ON c.client_id = ci.client_id
+      WHERE c.client_id = $1
+    `, [req.user.client_id]);
+
+    const client = clientResult.rows[0];
+
+    // Handle search
+    const searchQuery = req.query.q?.trim();
+    let freelancers;
+
+    if (searchQuery) {
+      const likeQuery = `%${searchQuery.toLowerCase()}%`;
+      freelancers = await db.query(`
+        SELECT 
+          f.freelancer_id AS id,
+          fi.profile_photo,
+          fi.name,
+          fi.expertise_level,
+          fi.skills,
+          fi.hourly_charge,
+          fi.bio
+        FROM freelancer f
+        LEFT JOIN freelancer_info fi
+          ON f.freelancer_id = fi.freelancer_id
+        WHERE 
+          LOWER(fi.name) LIKE $1
+          OR LOWER(fi.skills) LIKE $1
+          OR LOWER(fi.expertise_level) LIKE $1
+      `, [likeQuery]);
+    } else {
+      freelancers = await db.query(`
+        SELECT 
+          f.freelancer_id AS id,
+          fi.profile_photo,
+          fi.name,
+          fi.expertise_level,
+          fi.skills,
+          fi.hourly_charge,
+          fi.bio
+        FROM freelancer f
+        LEFT JOIN freelancer_info fi
+          ON f.freelancer_id = fi.freelancer_id
+      `);
     }
-  } else {
-    res.redirect("/client_login");
+
+    res.render("project_clients/client_home.ejs", {
+      user: client,
+      allFreelancers: freelancers.rows,
+      query: searchQuery || ""
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.send("Error loading client home page");
   }
 });
+
+
 
 
 // Client profile page
@@ -444,6 +487,7 @@ app.post("/client_newSignupForm", uploadClient.single("photo"), async (req, res)
     res.redirect("/client_newSignupForm");
   }
 });
+
 
 
 

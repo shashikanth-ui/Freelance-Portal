@@ -1,4 +1,5 @@
 <header class="py-3 mb-3 border-bottom">
+<link rel="stylesheet" href="/css/index_styles.css">
   <div class="container-fluid d-grid gap-3 align-items-center" style="grid-template-columns: 1fr 2fr;">
     
     <!-- Profile Dropdown (Left Corner) -->
@@ -18,8 +19,8 @@
 
     <!-- Search + Right Corner Signout -->
     <div class="d-flex align-items-center justify-content-end">
-      <form class="w-100 me-3" role="search" method="get" action="/search">
-        <input type="search" name="q" class="form-control" placeholder="Search..." aria-label="Search">
+      <form class="w-100 me-3" role="search" method="get" action="/client_home">
+        <input type="search" name="q" class="form-control" placeholder="Search..." aria-label="Search" value="<%= query %>">
       </form>
       <a href="/logout" class="btn btn-outline-danger">Sign out</a>
     </div>
