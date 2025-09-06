@@ -94,21 +94,187 @@ app.get("/freelancer_login",(req,res)=>{
     res.render("freelancer/freelancer_login.ejs");
 });
 
-app.get("/freelancer_home",(req,res)=>{
-        if(req.isAuthenticated()){
-            res.render("freelancer/freelancer_home.ejs");
-    }else{
-        res.redirect("/freelancer_login");
+app.get("/freelancer_home", async (req, res) => {
+  if (req.isAuthenticated()) {
+    try {
+      const details = await db.query(`
+        SELECT 
+          f.freelancer_id AS id,
+          f.freelancer_email AS email,
+          f.role,
+          fi.profile_photo,
+          fi.name,
+          fi.age,
+          fi.gender,
+          fi.expertise_level,
+          fi.skills,
+          fi.hourly_charge,
+          fi.bio,
+          fi.created_at,
+          fi.updated_at
+        FROM freelancer f
+        LEFT JOIN freelancer_info fi
+          ON f.freelancer_id = fi.freelancer_id
+        WHERE f.freelancer_id = $1
+      `, [req.user.freelancer_id]);
+
+      res.render("freelancer/freelancer_home.ejs", { user: details.rows[0] });
+      console.log(req.user);
+    } catch (err) {
+      console.error(err);
+      res.send("Error fetching freelancer details");
     }
+  } else {
+    res.redirect("/freelancer_login");
+  }
 });
 
-app.get("/client_home",(req,res)=>{
-    if(req.isAuthenticated()){
-        res.render("project_clients/client_home.ejs");
-    }else{
-        res.redirect("/client_login");
+
+app.get("/client_home", async (req, res) => {
+  if (req.isAuthenticated()) {
+    try {
+      const details = await db.query(`
+        SELECT 
+          c.client_id AS id,
+          c.client_email AS email,
+          c.role,
+          ci.name,
+          ci.age,
+          ci.gender,
+          ci.organization,
+          ci.contact_info,
+          ci.profile_photo,
+          ci.created_at,
+          ci.updated_at
+        FROM client c
+        LEFT JOIN client_info ci
+          ON c.client_id = ci.client_id
+        WHERE c.client_id = $1
+      `, [req.user.client_id]);
+
+      res.render("project_clients/client_home.ejs", { user: details.rows[0] });
+      console.log(req.user);
+    } catch (err) {
+      console.error(err);
+      res.send("Error fetching client details");
     }
+  } else {
+    res.redirect("/client_login");
+  }
 });
+
+
+// Client profile page
+app.get("/profile/client", async (req, res) => {
+  if (req.isAuthenticated() && req.user.role === "client") {
+    const details = await db.query(`
+      SELECT 
+        c.client_id AS id,
+        c.client_email AS email,
+        ci.name,
+        ci.age,
+        ci.gender,
+        ci.organization,
+        ci.contact_info,
+        ci.profile_photo
+      FROM client c
+      LEFT JOIN client_info ci ON c.client_id = ci.client_id
+      WHERE c.client_id = $1
+    `, [req.user.client_id]);
+
+    res.render("project_clients/client_profile.ejs", { user: details.rows[0] });
+  } else {
+    res.redirect("/client_login");
+  }
+});
+
+app.post("/profile/client", uploadClient.single("photo"), async (req, res) => {
+  if (!req.isAuthenticated()) return res.redirect("/client_login");
+
+  try {
+    const clientId = req.user.client_id;
+    const { name, age, gender, organization, contact } = req.body;
+    const photoPath = req.file ? `/images/client_images/${req.file.filename}` : null;
+
+    await db.query(
+      `UPDATE client_info
+       SET profile_photo = $2,
+           name = $3,
+           age = $4,
+           gender = $5,
+           organization = $6,
+           contact_info = $7,
+           updated_at = NOW()
+       WHERE client_id = $1`,
+      [clientId, photoPath, name, age, gender, organization, contact]
+    );
+
+    res.redirect("/client_home");
+  } catch (err) {
+    console.error(err);
+    res.redirect("/profile/client");
+  }
+});
+
+
+
+// Freelancer profile page
+app.get("/profile/freelancer", async (req, res) => {
+  if (req.isAuthenticated() && req.user.role === "freelancer") {
+    const details = await db.query(`
+      SELECT 
+        f.freelancer_id AS id,
+        f.freelancer_email AS email,
+        fi.profile_photo,
+        fi.name,
+        fi.age,
+        fi.gender,
+        fi.expertise_level,
+        fi.skills,
+        fi.hourly_charge,
+        fi.bio
+      FROM freelancer f
+      LEFT JOIN freelancer_info fi ON f.freelancer_id = fi.freelancer_id
+      WHERE f.freelancer_id = $1
+    `, [req.user.freelancer_id]);
+
+    res.render("freelancer/freelancer_profile.ejs", { user: details.rows[0] });
+  } else {
+    res.redirect("/freelancer_login");
+  }
+});
+
+app.post("/profile/freelancer", uploadFreelancer.single("photo"), async (req, res) => {
+  if (!req.isAuthenticated()) return res.redirect("/freelancer_login");
+
+  try {
+    const freelancerId = req.user.freelancer_id;
+    const { name, age, gender, expertise_level, skills, hourly_charge, bio } = req.body;
+    const photoPath = req.file ? `/images/freelancer_images/${req.file.filename}` : null;
+
+    await db.query(
+      `UPDATE freelancer_info
+       SET profile_photo = $2,
+           name = $3,
+           age = $4,
+           gender = $5,
+           expertise_level = $6,
+           skills = $7,
+           hourly_charge = $8,
+           bio = $9,
+           updated_at = NOW()
+       WHERE freelancer_id = $1`,
+      [freelancerId, photoPath, name, age, gender, expertise_level, skills, hourly_charge, bio]
+    );
+
+    res.redirect("/freelancer_home");
+  } catch (err) {
+    console.error(err);
+    res.redirect("/profile/freelancer");
+  }
+});
+
+
 
 app.get("/auth/google/client", passport.authenticate("google", { scope: ["profile","email"], state: "client" }));
 app.get("/auth/google/freelancer", passport.authenticate("google", { scope: ["profile","email"], state: "freelancer" }));
@@ -363,7 +529,6 @@ passport.use("google", new GoogleStrategy(
     }
   }
 ));
-
 
 
 passport.serializeUser((user,cb)=>{cb(null,user);});

@@ -1,0 +1,42 @@
+<%- include("../partials/header.ejs") %>
+
+<div class="newSignupForm-container">
+  <div class="new-signup-form client-form">
+    <h1 class="form-title">Client Profile Update</h1>
+    <form action="/profile/client" method="post" enctype="multipart/form-data">
+
+      <!-- Profile photo -->
+      <label for="photo">Profile Photo</label>
+      <input type="file" name="photo" id="photo" accept="image/*"  value="<%= user.profile_photo %>"  required>
+
+      <!-- Name -->
+      <label for="name">Full Name</label>
+      <input type="text" name="name" id="name" placeholder="Enter your full name" value="<%=user.name%>" required>
+
+      <!-- Age -->
+      <label for="age">Age</label>
+      <input type="number" name="age" id="age" min="18" max="100" value="<%=user.age%>" required>
+
+      <!-- Gender -->
+      <label for="gender">Gender</label>
+      <select name="gender" id="gender"  value="<%=user.gender%>"   required>
+        <option value="">Select</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="other">Other</option>
+      </select>
+
+      <!-- Organization / Designation -->
+      <label for="organization">Organization / Designation</label>
+      <input type="text" name="organization" id="organization" placeholder="e.g. ABC Corp / Project Manager"  value="<%=user.organization%>" required>
+
+      <!-- Contact -->
+      <label for="contact">Contact Info</label>
+      <input type="text" name="contact" id="contact" placeholder="Phone or Email" value="<%=user.contact_info%>" required>
+
+      <button type="submit" class="submit-btn">Update Profile</button>
+    </form>
+  </div>
+</div>
+
+<%- include("../partials/footer.ejs") %>

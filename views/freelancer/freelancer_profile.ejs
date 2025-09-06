@@ -1,0 +1,76 @@
+<%- include("../partials/header.ejs") %>
+
+<div class="newSignupForm-container">
+  <div class="new-signup-form freelancer-form">
+    <h1 class="form-title">Freelancer Profile Update</h1>
+    <form action="/profile/freelancer" method="post" enctype="multipart/form-data">
+
+      <!-- Profile photo -->
+      <label for="photo">Profile Photo</label>
+      <input type="file" name="photo" id="photo" accept="image/*" value="<%= user.profile_photo %>" required>
+
+      <!-- Name -->
+      <label for="name">Full Name</label>
+      <input type="text" name="name" id="name" placeholder="Enter your full name" value="<%= user.name %>" required>
+
+      <!-- Age -->
+      <label for="age">Age</label>
+      <input type="number" name="age" id="age" min="16" max="100" value="<%= user.age %>" required>
+
+      <!-- Gender -->
+      <label for="gender">Gender</label>
+      <select name="gender" id="gender" value="<%= user.gender %>" required>
+        <option value="">Select</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="other">Other</option>
+      </select>
+
+      <!-- Expertise -->
+      <label for="expertise">Expertise Level</label>
+      <select name="expertise" id="expertise" value="<%= user.expertise_level %>" required>
+        <option value="">Select</option>
+        <option value="beginner">Beginner</option>
+        <option value="intermediate">Intermediate</option>
+        <option value="expert">Expert</option>
+      </select>
+
+      <!-- Skills -->
+      <label for="skills">Skills</label>
+      <input type="text" name="skills" id="skills" placeholder="e.g. Web Development, Design" value="<%= user.skills %>" required>
+
+      <!-- Hourly Charge -->
+      <label for="hourlyCharge">Hourly Charge ($)</label>
+      <input type="number" name="hourlyCharge" id="hourlyCharge" placeholder="Select expertise first" value="<%= user.hourly_charge %>" required>
+
+      <!-- Bio -->
+      <label for="bio">Bio</label>
+      <textarea name="bio" id="bio" rows="4" placeholder="Tell clients about yourself..." value="<%= user.bio %>" required></textarea>
+
+      <button type="submit" class="submit-btn">update Profile</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const expertiseSelect = document.getElementById("expertise");
+  const hourlyInput = document.getElementById("hourlyCharge");
+
+  const ranges = {
+    beginner: { min: 5, max: 20 },
+    intermediate: { min: 20, max: 60 },
+    expert: { min: 60, max: 150 }
+  };
+
+  expertiseSelect.addEventListener("change", function () {
+    const level = this.value;
+    if (ranges[level]) {
+      hourlyInput.min = ranges[level].min;
+      hourlyInput.max = ranges[level].max;
+      hourlyInput.value = ranges[level].min; // default to min
+      hourlyInput.placeholder = `$${ranges[level].min} - $${ranges[level].max}/hr`;
+    }
+  });
+</script>
+
+<%- include("../partials/footer.ejs") %>
