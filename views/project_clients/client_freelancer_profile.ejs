@@ -1,0 +1,47 @@
+  <html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= freelancer_info.name %> - Profile</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/index_styles.css">
+</head>
+<body class="bg-light">
+
+  <div class="container py-5">
+    <!-- Back Button -->
+    <a href="/client_home" class="btn btn-outline-secondary mb-4">← Back</a>
+
+    <!-- Profile Card -->
+    <div class="card shadow-lg freelancer-profile">
+      <div class="card-body text-center">
+        <img src="<%= freelancer_info.profile_photo %>" 
+             alt="<%= freelancer_info.name %>" 
+             class="profile-photo mb-3">
+
+        <h2 class="freelancer-name"><%= freelancer_info.name %></h2>
+        <p class="freelancer-bio"><%= freelancer_info.bio || "No bio available." %></p>
+
+        <div class="row mt-4 text-start">
+          <div class="col-md-6">
+            <p><strong>Age:</strong> <%= freelancer_info.age %></p>
+            <p><strong>Gender:</strong> <%= freelancer_info.gender %></p>
+            <p><strong>Skills:</strong> <%= freelancer_info.skills %></p>
+          </div>
+          <div class="col-md-6">
+            <p><strong>Expertise:</strong> <%= freelancer_info.expertise_level %></p>
+            <p><strong>Hourly:</strong> $<%= freelancer_info.hourly_charge %> / hr</p>
+            <p><strong>Contact Email:</strong> <%= freelancer.freelancer_email %></p>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-4">
+          <a href="/chat/<%= freelancer.freelancer_id %>" class="btn btn-primary px-4">💬 Chat</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

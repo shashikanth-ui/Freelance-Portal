@@ -1,0 +1,33 @@
+
+
+<div class="container mt-5">
+  <h2>Add New Project</h2>
+  <form action="/client_addProject" method="POST">
+    <div class="mb-3">
+      <label for="title" class="form-label">Project Title</label>
+      <input type="text" id="title" name="project_title" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="skills" class="form-label">Required Skills</label>
+      <input type="text" id="skills" name="project_skills" class="form-control" placeholder="e.g., React, Node.js, PostgreSQL" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="expertise" class="form-label">Expertise Level</label>
+      <select id="expertise" name="project_expertise_level" class="form-select" required>
+        <option value="">Select level</option>
+        <option value="Beginner">Beginner</option>
+        <option value="Intermediate">Intermediate</option>
+        <option value="Expert">Expert</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="description" class="form-label">Project Description</label>
+      <textarea id="description" name="project_description" class="form-control" rows="4" placeholder="Write a short description about your project..." required></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Post Project</button>
+  </form>
+</div>

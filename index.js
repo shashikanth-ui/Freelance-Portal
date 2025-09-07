@@ -95,39 +95,45 @@ app.get("/freelancer_login",(req,res)=>{
 });
 
 app.get("/freelancer_home", async (req, res) => {
-  if (req.isAuthenticated()) {
-    try {
-      const details = await db.query(`
-        SELECT 
-          f.freelancer_id AS id,
-          f.freelancer_email AS email,
-          f.role,
-          fi.profile_photo,
-          fi.name,
-          fi.age,
-          fi.gender,
-          fi.expertise_level,
-          fi.skills,
-          fi.hourly_charge,
-          fi.bio,
-          fi.created_at,
-          fi.updated_at
-        FROM freelancer f
-        LEFT JOIN freelancer_info fi
-          ON f.freelancer_id = fi.freelancer_id
-        WHERE f.freelancer_id = $1
-      `, [req.user.freelancer_id]);
+  if (!req.isAuthenticated()) return res.redirect("/freelancer_login");
 
-      res.render("freelancer/freelancer_home.ejs", { user: details.rows[0] });
-      console.log(req.user);
-    } catch (err) {
-      console.error(err);
-      res.send("Error fetching freelancer details");
-    }
-  } else {
-    res.redirect("/freelancer_login");
+  try {
+    const freelancerDetails = await db.query(`
+      SELECT 
+        f.freelancer_id AS id,
+        f.freelancer_email AS email,
+        f.role,
+        fi.profile_photo,
+        fi.name,
+        fi.age,
+        fi.gender,
+        fi.expertise_level,
+        fi.skills,
+        fi.hourly_charge,
+        fi.bio
+      FROM freelancer f
+      LEFT JOIN freelancer_info fi
+        ON f.freelancer_id = fi.freelancer_id
+      WHERE f.freelancer_id = $1
+    `, [req.user.freelancer_id]);
+
+    const projects = await db.query(`
+      SELECT p.project_id, p.project_title, p.project_skills, p.project_expertise_level, p.project_description, c.client_id,c.client_email
+      FROM projects p
+      JOIN client c ON p.client_id = c.client_id
+      ORDER BY p.created_at DESC
+    `);
+
+    res.render("freelancer/freelancer_home.ejs", { 
+      user: freelancerDetails.rows[0], 
+      allProjects: projects.rows 
+    });
+  } catch (err) {
+    console.error(err);
+    res.send("Error fetching freelancer details");
   }
 });
+
 
 app.get("/client_home", async (req, res) => {
   if (!req.isAuthenticated()) return res.redirect("/client_login");
@@ -197,6 +203,7 @@ app.get("/client_home", async (req, res) => {
       allFreelancers: freelancers.rows,
       query: searchQuery || ""
     });
+    console.log(client);
 
   } catch (err) {
     console.error(err);
@@ -204,6 +211,33 @@ app.get("/client_home", async (req, res) => {
   }
 });
 
+app.get("/client_project_view/:cid&:pid", async (req, res) => {
+  try {
+    const { cid, pid } = req.params;
+
+    const projectInfo = await db.query(
+      "SELECT * FROM projects WHERE project_id = $1 AND client_id = $2",
+      [pid, cid]
+    );
+    const projectClient = await db.query(
+      "SELECT * FROM client_info WHERE client_id = $1",
+      [cid]
+    );
+    const client12 = await db.query(
+      "SELECT * FROM client  WHERE client_id = $1",
+      [cid]
+    );
+
+    if (projectInfo.rows.length === 0 || projectClient.rows.length === 0) {
+      return res.status(404).send("Project or client not found");
+    }
+
+    res.render("freelancer/freelancer_view_clientProjects.ejs", { projectInfo : projectInfo.rows[0] , projectClient : projectClient.rows[0] , client12: client12.rows[0]});
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
+  }
+});
 
 
 
@@ -316,6 +350,119 @@ app.post("/profile/freelancer", uploadFreelancer.single("photo"), async (req, re
     res.redirect("/profile/freelancer");
   }
 });
+
+
+app.get("/freelancer/:id",async(req,res)=>{
+  if (!req.isAuthenticated()) return res.redirect("/client_login");
+  try {
+    const result = await db.query("SELECT * from freelancer WHERE freelancer_id = $1 ",[req.params.id]);
+    if(result.rows.length === 0 ){
+      res.redirect("/client_home");
+    }else{
+      const resultInfo = await db.query("SELECT * from freelancer_info WHERE freelancer_id = $1",[req.params.id]);
+      res.render("project_clients/client_freelancer_profile.ejs",{freelancer:result.rows[0], freelancer_info: resultInfo.rows[0]});
+    }  
+  } catch (err) {
+      console.log(err);
+  }
+});
+
+
+app.get("/client_freelancer_profile_back",async(req,res)=>{
+  if (!req.isAuthenticated()) return res.redirect("/client_login");
+  try {
+    res.redirect("/client_home")
+  } catch (err) {
+      console.log(err);
+  }
+});
+
+
+
+app.get("/chat/:id",(req,res)=>{
+  if (!req.isAuthenticated()) return res.redirect("/client_login");
+  const client_id = req.user.client_id;
+  const freelancer_id = req.params.id;
+  console.log(client_id);
+  console.log(freelancer_id);
+})
+
+
+
+
+
+// Show project form
+app.get("/client_addProject", (req, res) => {
+  if (!req.isAuthenticated() || req.user.role !== "client") {
+    return res.redirect("/client_login");
+  }
+  res.render("project_clients/client_project_add.ejs", { user: req.user });
+});
+
+// Handle project submission
+app.post("/client_addProject", async (req, res) => {
+  if (!req.isAuthenticated() || req.user.role !== "client") {
+    return res.redirect("/client_login");
+  }
+
+  try {
+    const { project_title, project_skills, project_expertise_level, project_description } = req.body;
+
+    await db.query(
+      `INSERT INTO projects (client_id, project_title, project_skills, project_expertise_level, project_description)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [req.user.client_id, project_title, project_skills, project_expertise_level, project_description]
+    );
+
+
+    res.redirect("/client_home");
+  } catch (err) {
+    console.error(err);
+    res.send("Error adding project");
+  }
+});
+
+
+
+
+app.get("/freelancer/projects", async (req, res) => {
+  if (!req.isAuthenticated() || req.user.role !== "freelancer") {
+    return res.redirect("/freelancer_login");
+  }
+
+  try {
+    const projects = await db.query(`
+      SELECT 
+        p.project_id,
+        p.project_title,
+        p.project_skills,
+        p.project_expertise_level,
+        p.project_description,
+        p.client_id,
+        ci.name AS client_name,
+        ci.organization AS client_org
+      FROM projects p
+      LEFT JOIN client_info ci
+        ON p.client_id = ci.client_id
+      ORDER BY p.created_at DESC
+    `);
+
+    res.render("freelancer/freelancer_view_clientProjects.ejs", {
+      user: req.user,
+      allProjects: projects.rows,
+    });
+  } catch (err) {
+    console.error(err);
+    res.send("Error loading projects");
+  }
+});
+
+
+
+
+
+
+
 
 
 

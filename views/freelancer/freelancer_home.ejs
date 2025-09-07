@@ -1,4 +1,26 @@
-<%- include("../partials/home_header.ejs")  %>
+<%- include("../partials/free_home_header.ejs")  %>
+
+<div class="all-projects">
+  <h2>Available Projects</h2>
+
+  <% if (allProjects.length === 0) { %>
+    <p>No projects available at the moment.</p>
+  <% } else { %>
+    <% allProjects.forEach(p => { %>
+      <div class="project-card">
+        <h4><%= p.project_title %></h4>
+        <p><strong>Skills Required:</strong> <%= p.project_skills %></p>
+        <p><strong>Expertise Level:</strong> <%= p.project_expertise_level %></p>
+        <p><strong>Description:</strong> <%= p.project_description %></p>
+
+        <div class="project-actions">
+          <a href="/client_project_view/<%= p.client_id%>&<%= p.project_id %>" class="btn btn-secondary">View Client</a>
+          <a href="/apply/<%= p.project_id %>" class="btn btn-primary">Apply</a>
+        </div>
+      </div>
+    <% }) %>
+  <% } %>
+</div>
 
 
 <%- include("../partials/home_footer.ejs")  %>
