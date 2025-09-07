@@ -11,7 +11,7 @@
         <span class="ms-2"><%= user.name %></span>
       </a>
       <ul class="dropdown-menu text-small shadow">
-        <li><a class="dropdown-item" href="/profile/<%= user.role  %>">Edit Profile</a></li>
+        <li><a class="dropdown-item" href="/profile/<%= user.role  %>">Profile</a></li>
         <li><hr class="dropdown-divider"></li>
         <li><a class="dropdown-item" href="/logout">Sign out</a></li>
       </ul>
@@ -19,8 +19,8 @@
 
     <!-- Search + Right Corner Signout -->
     <div class="d-flex align-items-center justify-content-end">
-      <form class="w-100 me-3" role="search" method="get" action="/">
-        <input type="search" name="" class="form-control" placeholder="Search..." aria-label="Search" value="">
+      <form class="w-100 me-3" role="search" method="get" action="/freelancer_home">
+        <input type="search" name="q" class="form-control" placeholder="Search..." aria-label="Search" value="<%= query %>">
       </form>
       <a href="/logout" class="btn btn-outline-danger">Sign out</a>
     </div>

@@ -98,7 +98,8 @@ app.get("/freelancer_home", async (req, res) => {
   if (!req.isAuthenticated()) return res.redirect("/freelancer_login");
 
   try {
-    const freelancerDetails = await db.query(`
+    // Fetch freelancer details
+    const freelancerResult = await db.query(`
       SELECT 
         f.freelancer_id AS id,
         f.freelancer_email AS email,
@@ -117,22 +118,67 @@ app.get("/freelancer_home", async (req, res) => {
       WHERE f.freelancer_id = $1
     `, [req.user.freelancer_id]);
 
-    const projects = await db.query(`
-      SELECT p.project_id, p.project_title, p.project_skills, p.project_expertise_level, p.project_description, c.client_id,c.client_email
-      FROM projects p
-      JOIN client c ON p.client_id = c.client_id
-      ORDER BY p.created_at DESC
-    `);
+    const freelancer = freelancerResult.rows[0];
+
+    // Handle search
+    const searchQuery = req.query.q?.trim();
+    let projects;
+
+    if (searchQuery) {
+      const likeQuery = `%${searchQuery.toLowerCase()}%`;
+      projects = await db.query(`
+        SELECT 
+          p.project_id,
+          p.project_title,
+          p.project_skills,
+          p.project_expertise_level,
+          p.project_description,
+          p.project_status,
+          p.created_at,
+          c.client_id,
+          ci.name AS client_name,
+          c.client_email
+        FROM projects p
+        JOIN client c ON p.client_id = c.client_id
+        LEFT JOIN client_info ci ON c.client_id = ci.client_id
+        WHERE 
+          LOWER(p.project_title) LIKE $1
+          OR LOWER(p.project_skills) LIKE $1
+          OR LOWER(p.project_expertise_level) LIKE $1
+        ORDER BY p.created_at DESC
+      `, [likeQuery]);
+    } else {
+      projects = await db.query(`
+        SELECT 
+          p.project_id,
+          p.project_title,
+          p.project_skills,
+          p.project_expertise_level,
+          p.project_description,
+          p.project_status,
+          p.created_at,
+          c.client_id,
+          ci.name AS client_name,
+          c.client_email
+        FROM projects p
+        JOIN client c ON p.client_id = c.client_id
+        LEFT JOIN client_info ci ON c.client_id = ci.client_id
+        ORDER BY p.created_at DESC
+      `);
+    }
 
     res.render("freelancer/freelancer_home.ejs", { 
-      user: freelancerDetails.rows[0], 
-      allProjects: projects.rows 
+      user: freelancer, 
+      allProjects: projects.rows,
+      query: searchQuery || ""
     });
+
   } catch (err) {
     console.error(err);
     res.send("Error fetching freelancer details");
   }
 });
+
 
 
 app.get("/client_home", async (req, res) => {
