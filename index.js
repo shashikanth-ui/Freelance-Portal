@@ -425,13 +425,6 @@ app.get("/client_freelancer_profile_back",async(req,res)=>{
 
 
 
-app.get("/chat/:id",(req,res)=>{
-  if (!req.isAuthenticated()) return res.redirect("/client_login");
-  const client_id = req.user.client_id;
-  const freelancer_id = req.params.id;
-  console.log(client_id);
-  console.log(freelancer_id);
-})
 
 
 
@@ -682,6 +675,70 @@ app.post("/client_newSignupForm", uploadClient.single("photo"), async (req, res)
 });
 
 
+
+
+app.get("/chat/:id", async (req, res) => {
+  if (!req.isAuthenticated()) return res.redirect("/");
+
+  try {
+    let userId, userRole;
+    if (req.user.role === "client") {
+      userId = req.user.client_id;
+      userRole = "client";
+    } else if (req.user.role === "freelancer") {
+      userId = req.user.freelancer_id;
+      userRole = "freelancer";
+    }
+
+    const otherUserId = req.params.id;
+
+    // Fetch existing messages between logged-in user and the other user
+    const messages = await db.query(
+      `SELECT * FROM messages
+       WHERE (sender_id = $1 AND receiver_id = $2)
+          OR (sender_id = $2 AND receiver_id = $1)
+       ORDER BY created_at ASC`,
+      [userId, otherUserId]
+    );
+
+    res.render("chat.ejs", {
+      user: req.user,
+      userRole,
+      otherUserId,
+      messages: messages.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error loading chat");
+  }
+});
+
+
+app.post("/chat/send", async (req, res) => {
+  if (!req.isAuthenticated()) return res.redirect("/");
+
+  try {
+    let senderId;
+    if (req.user.role === "client") {
+      senderId = req.user.client_id;
+    } else if (req.user.role === "freelancer") {
+      senderId = req.user.freelancer_id;
+    }
+
+    const { receiver_id, message } = req.body;
+
+    await db.query(
+      `INSERT INTO messages (sender_id, receiver_id, message_text, created_at)
+       VALUES ($1, $2, $3, NOW())`,
+      [senderId, receiver_id, message]
+    );
+
+    res.redirect(`/chat/${receiver_id}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error sending message");
+  }
+});
 
 
 passport.use(

@@ -14,13 +14,12 @@
         <p><strong>Description:</strong> <%= p.project_description %></p>
 
         <div class="project-actions">
-          <a href="/client_project_view/<%= p.client_id%>&<%= p.project_id %>" class="btn btn-secondary">View Client</a>
-          <a href="/apply/<%= p.project_id %>" class="btn btn-primary">Apply</a>
+          <a href="/client_project_view/<%= p.client_id %>&<%= p.project_id %>" class="btn btn-secondary">View Client</a>
+          <a href="/chat/<%= p.client_id %>" class="btn btn-primary">Chat</a>
         </div>
       </div>
     <% }) %>
   <% } %>
 </div>
-
 
 <%- include("../partials/home_footer.ejs")  %>

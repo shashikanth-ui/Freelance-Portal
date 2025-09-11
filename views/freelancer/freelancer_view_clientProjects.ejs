@@ -1,5 +1,3 @@
-
-
 <div class="project-details">
   <h2><%= projectInfo.project_title %></h2>
 
@@ -13,7 +11,10 @@
   <p><strong>Name:</strong> <%= projectClient.name %></p>
   <p><strong>Email:</strong> <%= client12.client_email %></p>
 
-  <a href=">" class="btn btn-primary">Apply for this Project</a>
+  <div class="project-actions">
+    <a href="/apply/<%= projectInfo.project_id %>" class="btn btn-primary">Apply for this Project</a>
+    <a href="/chat/<%= projectClient.client_id %>" class="btn btn-secondary">Chat with Client</a>
+  </div>
 </div>
 
 
